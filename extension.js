@@ -19,7 +19,6 @@ Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 const FETCH_TIMEOUT_S = 60;
 const MENU_OPEN_REFRESH_S = 60;
 const FALLBACK_CODEXBAR = '/home/linuxbrew/.linuxbrew/bin/codexbar';
-const UNKNOWN_DASHES = 3;
 const UNKNOWN_ICON_OPACITY = 130;
 
 // A progress bar whose fill is a fraction of the width it actually receives,
@@ -161,13 +160,12 @@ class PanelItem {
             y_align: Clutter.ActorAlign.CENTER,
         });
         // Stands in for the bar when usage is unknown: an empty bar would read as 0% used.
-        this._unknown = new St.BoxLayout({
+        this._unknown = new St.Label({
+            text: provider.unknownText ?? 'n/a',
             style_class: 'aiu-unknown',
             y_align: Clutter.ActorAlign.CENTER,
             visible: false,
         });
-        for (let i = 0; i < UNKNOWN_DASHES; i++)
-            this._unknown.add_child(new St.Widget({style_class: 'aiu-unknown-dash'}));
         this._icon = providerIcon(dir, provider, {style_class: 'aiu-icon'});
         // Usage left to spend before a reset: a green bolt and the percentage.
         this._spend = new St.BoxLayout({style_class: 'aiu-spend-box', visible: false});

@@ -9,6 +9,8 @@ export const PROVIDERS = [
         name: 'Antigravity',
         color: '#4f8ef7',
         emptyHint: 'Open the Antigravity app to get usage',
+        // Shown in the top bar instead of the bar while no usage is known.
+        unknownText: 'closed',
         // Usage is only readable while the app runs, so old figures mislead.
         dropStaleData: true,
     },
@@ -49,6 +51,14 @@ function extraTitle({id, title}) {
     return title.replace('Gemini', `Gemini ${model[0].toUpperCase()}${model.slice(1)}`);
 }
 
+// With its app closed, Antigravity reports an untouched window that "resets"
+// a whole number of hours after the report was made, to the second: a
+// placeholder recomputed on every call, not real usage.
+function isPlaceholder(window, updatedAt) {
+    const ms = window.resetsAt - updatedAt;
+    return window.used === 0 && ms > 0 && ms % 3600000 === 0;
+}
+
 const isSameQuota = (a, b) =>
     a.minutes === b.minutes && a.resetsAt === b.resetsAt && a.used === b.used;
 
@@ -77,8 +87,9 @@ export function windowsOf(report) {
         }
         extras.push(window);
     }
+    const updatedAt = Date.parse(usage.updatedAt);
     // Stable, so windows of equal length keep codexbar's order.
-    return [...core, ...extras].sort((a, b) =>
+    return [...core, ...extras].filter(w => !isPlaceholder(w, updatedAt)).sort((a, b) =>
         a.minutes === b.minutes ? 0 : a.minutes - b.minutes);
 }
 

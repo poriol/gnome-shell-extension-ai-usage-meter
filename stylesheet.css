@@ -14,13 +14,14 @@
 .aiu-bar-menu { min-width: 90px; }
 .aiu-bar-fill { border-radius: 3px; }
 
-/* Unknown usage: a dashed track exactly as wide as .aiu-bar-panel */
-.aiu-unknown { spacing: 5px; }
-.aiu-unknown-dash {
-    width: 6px;
-    height: 4px;
-    border-radius: 2px;
-    background-color: rgba(255, 255, 255, 0.4);
+/* Unknown usage: a small outlined tag in place of .aiu-bar-panel */
+.aiu-unknown {
+    font-size: 0.75em;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 4px;
+    padding: 0 4px;
 }
 
 /* Menu: one line per window, in aligned columns */
