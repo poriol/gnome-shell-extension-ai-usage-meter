@@ -1,0 +1,59 @@
+/* Top bar */
+.aiu-box { spacing: 12px; }
+.aiu-provider { spacing: 5px; }
+.aiu-icon { icon-size: 16px; }
+.aiu-label { font-weight: bold; font-feature-settings: "tnum"; }
+
+/* Progress bar, shared by the top bar and the menu */
+.aiu-bar {
+    height: 6px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+.aiu-bar-panel { width: 28px; height: 8px; border-radius: 4px; }
+.aiu-bar-menu { min-width: 90px; }
+.aiu-bar-fill { border-radius: 3px; }
+
+/* Unknown usage: a dashed track exactly as wide as .aiu-bar-panel */
+.aiu-unknown { spacing: 5px; }
+.aiu-unknown-dash {
+    width: 6px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Menu: one line per window, in aligned columns */
+.aiu-header, .aiu-row, .aiu-note-item, .aiu-footer {
+    min-height: 0;
+    padding: 1px 10px;
+    spacing: 8px;
+}
+.aiu-header { padding-top: 7px; spacing: 6px; }
+.aiu-header-name { font-size: 9.5pt; font-weight: bold; }
+.aiu-row-label { width: 136px; font-size: 9.5pt; }
+.aiu-row-percent {
+    width: 38px;
+    font-size: 9.5pt;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+    text-align: right;
+}
+.aiu-row-reset {
+    width: 46px;
+    font-size: 9.5pt;
+    color: #8a8a8f;
+    font-feature-settings: "tnum";
+    text-align: right;
+}
+.aiu-bad { font-size: 9pt; color: #f6a35b; }
+.aiu-note { max-width: 300px; font-size: 9pt; color: #8a8a8f; }
+.aiu-footer { padding-top: 6px; spacing: 2px; }
+.aiu-footer-button { padding: 4px; border-radius: 6px; }
+.aiu-footer-button:hover, .aiu-footer-button:focus { background-color: rgba(255, 255, 255, 0.12); }
+
+/* Usage left to spend before a reset */
+.aiu-spend-box { spacing: 2px; }
+.aiu-spend-icon { icon-size: 12px; }
+.aiu-spend-item { min-height: 0; padding: 0 10px 2px; spacing: 6px; }
+.aiu-spend { font-size: 9pt; font-weight: bold; }

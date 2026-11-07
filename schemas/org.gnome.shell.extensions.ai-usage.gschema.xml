@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ai-usage"
+          path="/org/gnome/shell/extensions/ai-usage/">
+    <key name="panel-metric" type="s">
+      <choices>
+        <choice value="session"/>
+        <choice value="weekly"/>
+        <choice value="highest"/>
+      </choices>
+      <default>'session'</default>
+      <summary>Which window the top bar shows</summary>
+    </key>
+    <key name="percent-min" type="i">
+      <range min="0" max="100"/>
+      <default>80</default>
+      <summary>Used percentage from which the top bar shows the number</summary>
+    </key>
+    <key name="refresh-minutes" type="i">
+      <range min="1" max="60"/>
+      <default>5</default>
+      <summary>Minutes between refreshes</summary>
+    </key>
+    <key name="show-claude" type="b">
+      <default>true</default>
+      <summary>Show Claude</summary>
+    </key>
+    <key name="show-codex" type="b">
+      <default>true</default>
+      <summary>Show Codex</summary>
+    </key>
+    <key name="show-antigravity" type="b">
+      <default>true</default>
+      <summary>Show Antigravity</summary>
+    </key>
+    <key name="spend-highlight" type="b">
+      <default>true</default>
+      <summary>Highlight usage left to spend before a window resets</summary>
+    </key>
+    <key name="spend-notify" type="b">
+      <default>true</default>
+      <summary>Send a notification when usage is left to spend</summary>
+    </key>
+    <key name="spend-min-left" type="i">
+      <range min="1" max="100"/>
+      <default>20</default>
+      <summary>Minimum percentage left to count as worth spending</summary>
+    </key>
+    <key name="spend-session-minutes" type="i">
+      <range min="5" max="300"/>
+      <default>60</default>
+      <summary>Minutes before a session window resets to start highlighting</summary>
+    </key>
+    <key name="spend-weekly-hours" type="i">
+      <range min="1" max="168"/>
+      <default>24</default>
+      <summary>Hours before a weekly window resets to start highlighting</summary>
+    </key>
+  </schema>
+</schemalist>
