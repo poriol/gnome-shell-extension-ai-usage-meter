@@ -160,8 +160,9 @@ class PanelItem {
             y_align: Clutter.ActorAlign.CENTER,
         });
         // Stands in for the bar when usage is unknown: an empty bar would read as 0% used.
-        this._unknown = new St.Label({
-            text: provider.unknownText ?? 'n/a',
+        // A sleeping moon: the app is closed, so its usage can't be read.
+        this._unknown = new St.Icon({
+            gicon: Gio.FileIcon.new(dir.get_child('icons').get_child('closed-symbolic.svg')),
             style_class: 'aiu-unknown',
             y_align: Clutter.ActorAlign.CENTER,
             visible: false,

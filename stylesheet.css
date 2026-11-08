@@ -14,14 +14,10 @@
 .aiu-bar-menu { min-width: 90px; }
 .aiu-bar-fill { border-radius: 3px; }
 
-/* Unknown usage: a small outlined tag in place of .aiu-bar-panel */
+/* Unknown usage: a dim sleeping moon in place of .aiu-bar-panel */
 .aiu-unknown {
-    font-size: 0.75em;
-    font-weight: bold;
-    color: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    border-radius: 4px;
-    padding: 0 4px;
+    icon-size: 14px;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 /* Menu: one line per window, in aligned columns */

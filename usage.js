@@ -9,8 +9,6 @@ export const PROVIDERS = [
         name: 'Antigravity',
         color: '#4f8ef7',
         emptyHint: 'Open the Antigravity app to get usage',
-        // Shown in the top bar instead of the bar while no usage is known.
-        unknownText: 'closed',
         // Usage is only readable while the app runs, so old figures mislead.
         dropStaleData: true,
     },
@@ -46,7 +44,7 @@ function toWindow(key, label, raw) {
 // weekly") and only the id tells them apart: ...-gemini-argon-wtu-weekly.
 function extraTitle({id, title}) {
     const model = id.match(/-gemini-([a-z]+)-/)?.[1];
-    if (!model)
+    if (!model || title.toLowerCase().includes(model))
         return title;
     return title.replace('Gemini', `Gemini ${model[0].toUpperCase()}${model.slice(1)}`);
 }
@@ -87,9 +85,16 @@ export function windowsOf(report) {
         }
         extras.push(window);
     }
+    const windows = [...core, ...extras];
+    // A real 0% window looks just like a placeholder, so judge the whole
+    // report: one window with real figures means the connection works and
+    // every window, 0% ones included, is genuine. All placeholders means
+    // nothing is connected, so no usage is known.
     const updatedAt = Date.parse(usage.updatedAt);
+    if (windows.every(w => isPlaceholder(w, updatedAt)))
+        return [];
     // Stable, so windows of equal length keep codexbar's order.
-    return [...core, ...extras].filter(w => !isPlaceholder(w, updatedAt)).sort((a, b) =>
+    return windows.sort((a, b) =>
         a.minutes === b.minutes ? 0 : a.minutes - b.minutes);
 }
 
