@@ -16,7 +16,8 @@ export const PROVIDERS = [
 
 export const MUTED_COLOR = '#888888';
 const WARN = {percent: 70, color: '#e5a50a'};
-const DANGER = {percent: 90, color: '#e01b24'};
+export const DANGER_COLOR = '#e01b24';
+const DANGER = {percent: 90, color: DANGER_COLOR};
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -106,6 +107,14 @@ export function panelWindow(windows, metric) {
         return windows[0];
     return windows.find(w => metric === 'weekly' && w.key === 'secondary') ??
         windows.reduce((a, b) => (!a || b.used > a.used ? b : a), null);
+}
+
+// The weekly (longer than a day) window that is used up, or null. With
+// several, the one resetting last: it is what keeps the provider blocked.
+export function exhaustedWindow(windows) {
+    return windows
+        .filter(w => w.minutes > SHORT_WINDOW_MINUTES && w.used >= 100)
+        .reduce((a, b) => (!a || b.resetsAt > a.resetsAt ? b : a), null);
 }
 
 export function usageColor(used, baseColor) {

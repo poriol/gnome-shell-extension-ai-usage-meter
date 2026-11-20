@@ -15,6 +15,7 @@
 .aiu-bar-fill { border-radius: 3px; }
 
 /* Unknown usage: a dim sleeping moon in place of .aiu-bar-panel */
+.aiu-locked { icon-size: 13px; }
 .aiu-unknown {
     icon-size: 14px;
     color: rgba(255, 255, 255, 0.55);

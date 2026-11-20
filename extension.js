@@ -10,7 +10,8 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {
-    MUTED_COLOR, PROVIDERS, SPEND_COLOR, bestSpend, panelWindow, parseReport, resetText,
+    DANGER_COLOR, MUTED_COLOR, PROVIDERS, SPEND_COLOR, bestSpend, exhaustedWindow, panelWindow,
+    parseReport, resetText,
     spendOf, usageColor, windowsOf,
 } from './usage.js';
 
@@ -167,6 +168,14 @@ class PanelItem {
             y_align: Clutter.ActorAlign.CENTER,
             visible: false,
         });
+        // A used-up weekly window blocks the provider whatever the session says.
+        this._locked = new St.Icon({
+            gicon: Gio.FileIcon.new(dir.get_child('icons').get_child('locked-symbolic.svg')),
+            style_class: 'aiu-locked',
+            style: `color: ${DANGER_COLOR};`,
+            y_align: Clutter.ActorAlign.CENTER,
+            visible: false,
+        });
         this._icon = providerIcon(dir, provider, {style_class: 'aiu-icon'});
         // Usage left to spend before a reset: a green bolt and the percentage.
         this._spend = new St.BoxLayout({style_class: 'aiu-spend-box', visible: false});
@@ -180,6 +189,7 @@ class PanelItem {
         this.actor.add_child(this._icon);
         this.actor.add_child(this._bar);
         this.actor.add_child(this._unknown);
+        this.actor.add_child(this._locked);
         this.actor.add_child(this._label);
         this.actor.add_child(this._spend);
     }
@@ -190,13 +200,19 @@ class PanelItem {
         this._spend.visible = Boolean(best);
         if (best)
             this._spendLabel.text = `${Math.round(best.spend.left)}%`;
-        const window = state?.data ? panelWindow(windows, metric) : null;
+        const exhausted = exhaustedWindow(windows);
+        this._locked.visible = Boolean(exhausted);
+        const window = exhausted ?? (state?.data ? panelWindow(windows, metric) : null);
         const failed = !window && state?.error && !this.provider.dropStaleData;
         const unknown = Boolean(state) && !window && !failed;
         this._bar.visible = Boolean(window);
         this._unknown.visible = unknown;
         this._icon.opacity = unknown ? UNKNOWN_ICON_OPACITY : 255;
-        if (window) {
+        if (exhausted) {
+            this._bar.update(100, DANGER_COLOR);
+            // Blocked until the weekly reset: show when, as its biggest unit ("2d").
+            this._setLabel(resetText(exhausted).split(' ')[0], DANGER_COLOR);
+        } else if (window) {
             const color = usageColor(window.used, this.provider.color);
             this._bar.update(window.used, this.provider.color);
             // The bolt's figure says enough; a second percentage would confuse.
