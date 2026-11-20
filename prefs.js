@@ -22,6 +22,50 @@ function metricRow(settings) {
     return row;
 }
 
+const REPO_URL = 'https://github.com/poriol/gnome-shell-extension-ai-usage-meter';
+
+// A row that opens a web page in the browser.
+function linkRow(window, title, subtitle, url) {
+    const row = new Adw.ActionRow({title, subtitle, activatable: true});
+    row.add_suffix(new Gtk.Image({icon_name: 'adw-external-link-symbolic'}));
+    row.connect('activated', () => new Gtk.UriLauncher({uri: url}).launch(window, null, null));
+    return row;
+}
+
+// Name, version and what it is, centred at the top of the About page.
+function aboutHeader(metadata, dir) {
+    const box = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        spacing: 6,
+        halign: Gtk.Align.CENTER,
+        margin_bottom: 12,
+    });
+    box.append(new Gtk.Image({
+        gicon: Gio.FileIcon.new(dir.get_child('icons').get_child('spend-symbolic.svg')),
+        pixel_size: 64,
+        css_classes: ['accent'],
+        margin_bottom: 6,
+    }));
+    box.append(new Gtk.Label({label: metadata.name, css_classes: ['title-1']}));
+    box.append(new Gtk.Label({
+        label: metadata['version-name'] ? `Version ${metadata['version-name']}` : 'Development version',
+        css_classes: ['dim-label'],
+    }));
+    box.append(new Gtk.Label({
+        label: 'Your Claude, Codex and Antigravity limits, always in sight in the top bar.',
+        wrap: true,
+        justify: Gtk.Justification.CENTER,
+        margin_top: 6,
+    }));
+    box.append(new Gtk.Label({
+        label: '🚧 Work in progress: expect rough edges and changes between releases.',
+        wrap: true,
+        justify: Gtk.Justification.CENTER,
+        css_classes: ['dim-label', 'caption'],
+    }));
+    return box;
+}
+
 function spinRow(settings, key, title, subtitle, min, max) {
     const row = Adw.SpinRow.new_with_range(min, max, 1);
     row.title = title;
@@ -78,5 +122,23 @@ export default class AiUsagePrefs extends ExtensionPreferences {
         addPage('Providers', 'view-grid-symbolic').add(providers);
         for (const {id, name} of PROVIDERS)
             providers.add(switchRow(`show-${id}`, name));
+
+        const aboutPage = addPage('About', 'help-about-symbolic');
+        const header = new Adw.PreferencesGroup();
+        header.add(aboutHeader(this.metadata, this.dir));
+        aboutPage.add(header);
+
+        const links = new Adw.PreferencesGroup();
+        aboutPage.add(links);
+        links.add(linkRow(window, 'Source code', 'GitHub', REPO_URL));
+        links.add(linkRow(window, 'Report an issue', 'Bugs, missing providers and ideas are welcome', `${REPO_URL}/issues`));
+        links.add(linkRow(window, 'codexbar', 'The tool this extension reads your usage from',
+            'https://github.com/steipete/CodexBar'));
+
+        const credits = new Adw.PreferencesGroup();
+        aboutPage.add(credits);
+        credits.add(linkRow(window, 'Made by poriol', 'Built because nothing else did it the way I wanted',
+            'https://github.com/poriol'));
+        credits.add(linkRow(window, 'License', 'GPL-2.0-or-later', `${REPO_URL}/blob/main/LICENSE`));
     }
 }
