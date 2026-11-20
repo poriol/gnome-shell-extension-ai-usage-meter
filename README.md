@@ -1,6 +1,6 @@
-# AI Usage Meter
+# AI Usage Meter — GNOME Shell Extension
 
-GNOME Shell extension (GNOME 50) that shows Claude, Codex and Antigravity usage limits in the top bar, using the [codexbar](https://github.com/steipete/CodexBar) CLI.
+A GNOME Shell extension (GNOME 50) that shows Claude, Codex and Antigravity usage limits in the top bar, using the [codexbar](https://github.com/steipete/CodexBar) CLI.
 
 - One bar per provider, in the provider's color, plus a menu listing every rate window and its reset countdown.
 - **Use it before it resets:** a green ⚡ with the percentage still left to spend appears when a window is close to resetting with usage left over, with an optional notification. Thresholds are adjustable in the settings.
@@ -16,7 +16,7 @@ The extension never reads or stores your API keys or logins: it only runs `codex
 ## Install the latest version
 
 ```sh
-wget -O /tmp/ai-usage-meter.zip https://github.com/poriol/gnome-ai-usage-meter/releases/latest/download/ai-usage-meter.zip
+wget -O /tmp/ai-usage-meter.zip https://github.com/poriol/gnome-shell-extension-ai-usage-meter/releases/latest/download/ai-usage-meter.zip
 gnome-extensions install --force /tmp/ai-usage-meter.zip
 ```
 
@@ -26,12 +26,12 @@ Log out and back in, then:
 gnome-extensions enable ai-usage@local
 ```
 
-Run the same commands again to update. You can also download the zip by hand from the [Releases page](https://github.com/poriol/gnome-ai-usage-meter/releases/latest).
+Run the same commands again to update. You can also download the zip by hand from the [Releases page](https://github.com/poriol/gnome-shell-extension-ai-usage-meter/releases/latest).
 
 ### From source
 
 ```sh
-git clone https://github.com/poriol/gnome-ai-usage-meter ~/.local/share/gnome-shell/extensions/ai-usage@local
+git clone https://github.com/poriol/gnome-shell-extension-ai-usage-meter ~/.local/share/gnome-shell/extensions/ai-usage@local
 glib-compile-schemas ~/.local/share/gnome-shell/extensions/ai-usage@local/schemas
 ```
 
