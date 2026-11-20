@@ -5,7 +5,7 @@
 > 🚧 **Work in progress.** It works well on my machine every day, but it is young: expect rough edges, missing providers and changes between releases. Feedback, issues and pull requests are very welcome.
 
 <p align="center">
-  <img src="docs/preview.svg" alt="Illustration of the top bar: Claude, Codex and Antigravity usage bars, with the Claude menu open showing its rate windows" width="720">
+  <img src="docs/screenshot.png" alt="The AI Usage Meter in the GNOME top bar, with its menu open showing Claude, Codex and Antigravity rate windows, usage percentages and reset countdowns" width="640">
 </p>
 
 ## Why
