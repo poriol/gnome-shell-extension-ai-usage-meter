@@ -25,16 +25,33 @@ I looked for a GNOME extension that showed all of this at a glance and couldn't 
 
 The extension never reads or stores your API keys or logins: it only runs [`codexbar`](https://github.com/steipete/CodexBar), which uses the sign-ins of the apps themselves.
 
-## Requirements
+## Install
 
-- GNOME Shell 50
-- [`codexbar`](https://github.com/steipete/CodexBar) on `PATH` (or at `/home/linuxbrew/.linuxbrew/bin/codexbar`), signed in to the providers you use
-
-## Install the latest version
+**1. Install `codexbar`** (the extension reads your usage through it), then sign in to the providers you use:
 
 ```sh
-wget -O /tmp/ai-usage-meter.zip https://github.com/poriol/gnome-shell-extension-ai-usage-meter/releases/latest/download/ai-usage-meter.zip
-gnome-extensions install --force /tmp/ai-usage-meter.zip
+brew install steipete/tap/codexbar
+```
+
+**2. Install the extension** with one command:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/poriol/gnome-shell-extension-ai-usage-meter/main/install.sh | bash
+```
+
+**3. Log out and back in.** The meter appears in the top bar.
+
+That's it. Run the same command again any time to update to the latest version.
+
+Requires **GNOME Shell 50**.
+
+<details>
+<summary>Install by hand instead</summary>
+
+Download `ai-usage-meter.zip` from the [latest release](https://github.com/poriol/gnome-shell-extension-ai-usage-meter/releases/latest), then:
+
+```sh
+gnome-extensions install --force ai-usage-meter.zip
 ```
 
 Log out and back in, then:
@@ -43,34 +60,52 @@ Log out and back in, then:
 gnome-extensions enable ai-usage@local
 ```
 
-Run the same commands again to update. You can also download the zip by hand from the [Releases page](https://github.com/poriol/gnome-shell-extension-ai-usage-meter/releases/latest).
+</details>
 
-### From source
+<details>
+<summary>Install from source</summary>
 
 ```sh
 git clone https://github.com/poriol/gnome-shell-extension-ai-usage-meter ~/.local/share/gnome-shell/extensions/ai-usage@local
 glib-compile-schemas ~/.local/share/gnome-shell/extensions/ai-usage@local/schemas
 ```
 
-Then log out and back in and enable it as above.
+Log out and back in, then `gnome-extensions enable ai-usage@local`.
+
+</details>
+
+<details>
+<summary>Uninstall</summary>
+
+```sh
+gnome-extensions uninstall ai-usage@local
+```
+
+</details>
 
 ## Settings
 
-```sh
-gnome-extensions prefs ai-usage@local
-```
+Open them from the ⚙ button at the bottom of the menu, or with `gnome-extensions prefs ai-usage@local`.
 
-## Releasing
+<table>
+  <tr>
+    <td align="center"><a href="docs/settings-display.png"><img src="docs/settings-display.png" alt="Display settings: which window the top bar shows, when to show the percentage, refresh interval"></a><br><b>Display</b><br>What the top bar shows and how often it refreshes</td>
+    <td align="center"><a href="docs/settings-use-it.png"><img src="docs/settings-use-it.png" alt="Use it settings: the green bolt, notifications and when they appear"></a><br><b>Use it</b><br>When the ⚡ “use it before it resets” hint appears</td>
+    <td align="center"><a href="docs/settings-providers.png"><img src="docs/settings-providers.png" alt="Providers settings: switches for Claude, Codex and Antigravity"></a><br><b>Providers</b><br>Which services appear in the top bar</td>
+  </tr>
+</table>
+
+## Contributing
+
+This is a personal project in progress. If something breaks, a provider is missing or you have an idea, open an issue or a pull request.
+
+### Releasing (maintainers)
 
 Push a tag and GitHub Actions builds `ai-usage-meter.zip` and publishes it as a release:
 
 ```sh
 git tag v1 && git push origin v1
 ```
-
-## Contributing
-
-This is a personal project in progress. If something breaks, a provider is missing or you have an idea, open an issue or a pull request.
 
 ## License
 
