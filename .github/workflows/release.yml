@@ -1,0 +1,47 @@
+name: Release
+
+# Push a tag like v3 (or run it by hand) to build the installable zip and publish a release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y libglib2.0-bin jq zip
+
+      - name: Build zip
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p build
+          cp -r extension.js usage.js prefs.js stylesheet.css icons schemas LICENSE build/
+          # Stamp the tag into metadata.json so GNOME shows which release is installed.
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            jq --arg v "$VERSION" '. + {"version-name": $v}' metadata.json > build/metadata.json
+          else
+            cp metadata.json build/metadata.json
+          fi
+          glib-compile-schemas --strict build/schemas
+          (cd build && zip -r ../ai-usage-meter.zip .)
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" ai-usage-meter.zip --generate-notes --title "$GITHUB_REF_NAME"
+
+      - name: Keep the zip of a manual run
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-usage-meter
+          path: ai-usage-meter.zip
