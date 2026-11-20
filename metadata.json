@@ -1,5 +1,5 @@
 {
-  "uuid": "ai-usage@local",
+  "uuid": "ai-usage-meter@poriol.github.io",
   "name": "AI Usage Meter",
   "description": "Shows Claude, Codex and Antigravity usage limits in the top bar, using the codexbar CLI.",
   "settings-schema": "org.gnome.shell.extensions.ai-usage",

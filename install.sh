@@ -3,7 +3,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/poriol/gnome-shell-extension-ai-usage-meter/main/install.sh | bash
 set -euo pipefail
 
-UUID='ai-usage@local'
+UUID='ai-usage-meter@poriol.github.io'
 ZIP_URL='https://github.com/poriol/gnome-shell-extension-ai-usage-meter/releases/latest/download/ai-usage-meter.zip'
 
 if ! command -v gnome-extensions >/dev/null; then

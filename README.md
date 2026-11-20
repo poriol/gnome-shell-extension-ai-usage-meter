@@ -57,7 +57,7 @@ gnome-extensions install --force ai-usage-meter.zip
 Log out and back in, then:
 
 ```sh
-gnome-extensions enable ai-usage@local
+gnome-extensions enable ai-usage-meter@poriol.github.io
 ```
 
 </details>
@@ -66,11 +66,11 @@ gnome-extensions enable ai-usage@local
 <summary>Install from source</summary>
 
 ```sh
-git clone https://github.com/poriol/gnome-shell-extension-ai-usage-meter ~/.local/share/gnome-shell/extensions/ai-usage@local
-glib-compile-schemas ~/.local/share/gnome-shell/extensions/ai-usage@local/schemas
+git clone https://github.com/poriol/gnome-shell-extension-ai-usage-meter ~/.local/share/gnome-shell/extensions/ai-usage-meter@poriol.github.io
+glib-compile-schemas ~/.local/share/gnome-shell/extensions/ai-usage-meter@poriol.github.io/schemas
 ```
 
-Log out and back in, then `gnome-extensions enable ai-usage@local`.
+Log out and back in, then `gnome-extensions enable ai-usage-meter@poriol.github.io`.
 
 </details>
 
@@ -78,14 +78,14 @@ Log out and back in, then `gnome-extensions enable ai-usage@local`.
 <summary>Uninstall</summary>
 
 ```sh
-gnome-extensions uninstall ai-usage@local
+gnome-extensions uninstall ai-usage-meter@poriol.github.io
 ```
 
 </details>
 
 ## Settings
 
-Open them from the ⚙ button at the bottom of the menu, or with `gnome-extensions prefs ai-usage@local`.
+Open them from the ⚙ button at the bottom of the menu, or with `gnome-extensions prefs ai-usage-meter@poriol.github.io`.
 
 <table>
   <tr>

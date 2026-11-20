@@ -30,7 +30,8 @@ jobs:
           else
             cp metadata.json build/metadata.json
           fi
-          glib-compile-schemas --strict build/schemas
+          # GNOME compiles the schema itself on install; only check that it is valid.
+          glib-compile-schemas --strict --dry-run build/schemas
           (cd build && zip -r ../ai-usage-meter.zip .)
 
       - name: Publish release

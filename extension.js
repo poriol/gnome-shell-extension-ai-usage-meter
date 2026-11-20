@@ -228,6 +228,12 @@ class PanelItem {
         this._label.visible = text !== '';
         this._label.set_style(`color: ${color};`);
     }
+
+    destroy() {
+        this.actor.destroy();
+        this.actor = this._bar = this._label = this._unknown = this._locked = null;
+        this._icon = this._spend = this._spendLabel = null;
+    }
 }
 
 const UsageIndicator = GObject.registerClass(
@@ -257,11 +263,11 @@ class UsageIndicator extends PanelMenu.Button {
                 this._refresh();
             this._render();
         }, this);
-        this.menu.connect('open-state-changed', (_menu, open) => {
+        this.menu.connectObject('open-state-changed', (_menu, open) => {
             const age = GLib.get_monotonic_time() - this._lastRefresh;
             if (open && age > MENU_OPEN_REFRESH_S * GLib.USEC_PER_SEC)
                 this._refresh();
-        });
+        }, this);
 
         this._render();
         this._refresh();
@@ -372,9 +378,9 @@ class UsageIndicator extends PanelMenu.Button {
                     title: 'AI Usage Meter',
                     iconName: 'starred-symbolic',
                 });
-                this._source.connect('destroy', () => {
+                this._source.connectObject('destroy', () => {
                     this._source = null;
-                });
+                }, this);
                 Main.messageTray.add(this._source);
             }
             this._source.addNotification(new MessageTray.Notification({
@@ -431,9 +437,13 @@ class UsageIndicator extends PanelMenu.Button {
         if (this._timerId)
             GLib.source_remove(this._timerId);
         this._timerId = 0;
+        this._source?.disconnectObject(this);
         this._source?.destroy();
         this._source = null;
         this._settings.disconnectObject(this);
+        this.menu.disconnectObject(this);
+        this._panelItems.forEach(item => item.destroy());
+        this._panelItems = null;
         super.destroy();
     }
 });
