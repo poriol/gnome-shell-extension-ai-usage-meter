@@ -22,6 +22,23 @@ function metricRow(settings) {
     return row;
 }
 
+const POSITIONS = [
+    ['left', 'Left'],
+    ['center', 'Middle'],
+    ['right', 'Right'],
+];
+
+function positionRow(settings) {
+    const row = new Adw.ComboRow({
+        title: 'Area',
+        subtitle: 'Which part of the top bar it sits in',
+        model: Gtk.StringList.new(POSITIONS.map(([, label]) => label)),
+        selected: Math.max(0, POSITIONS.findIndex(([id]) => id === settings.get_string('panel-position'))),
+    });
+    row.connect('notify::selected', () => settings.set_string('panel-position', POSITIONS[row.selected][0]));
+    return row;
+}
+
 const REPO_URL = 'https://github.com/poriol/gnome-shell-extension-ai-usage-meter';
 
 // A row that opens a web page in the browser.
@@ -89,12 +106,19 @@ export default class AiUsagePrefs extends ExtensionPreferences {
             return row;
         };
 
+        const displayPage = addPage('Display', 'video-display-symbolic');
         const display = new Adw.PreferencesGroup({title: 'Top bar'});
-        addPage('Display', 'video-display-symbolic').add(display);
+        displayPage.add(display);
         display.add(metricRow(settings));
         display.add(spinRow(settings, 'percent-min', 'Show percentage from (% used)',
             'Hide the top-bar number below this usage. 0 = always show', 0, 100));
         display.add(spinRow(settings, 'refresh-minutes', 'Refresh every (minutes)', '', 1, 60));
+
+        const position = new Adw.PreferencesGroup({title: 'Position'});
+        displayPage.add(position);
+        position.add(positionRow(settings));
+        position.add(spinRow(settings, 'panel-index', 'Place in that area',
+            '0 = leftmost; higher moves it further right', 0, 20));
 
         const spendPage = addPage('Use it', 'starred-symbolic');
         const spend = new Adw.PreferencesGroup({

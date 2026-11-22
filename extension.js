@@ -2,6 +2,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Pango from 'gi://Pango';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -10,12 +11,12 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {
-    DANGER_COLOR, MUTED_COLOR, PROVIDERS, SPEND_COLOR, bestSpend, exhaustedWindow, panelWindow,
-    parseReport, resetText,
-    spendOf, usageColor, windowsOf,
+    DANGER_COLOR, MUTED_COLOR, PROVIDERS, SPEND_COLOR, bestSpend, exhaustedWindow, fixFor,
+    panelWindow, parseReport, resetText, spendOf, usageColor, windowsOf,
 } from './usage.js';
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
+Gio._promisify(Gio.Subprocess.prototype, 'wait_async');
 
 const FETCH_TIMEOUT_S = 60;
 const MENU_OPEN_REFRESH_S = 60;
@@ -75,8 +76,32 @@ function staticItem(styleClass) {
 
 function noteItem(text, styleClass = '') {
     const item = staticItem('aiu-note-item');
-    item.add_child(new St.Label({text, style_class: `aiu-note ${styleClass}`, x_expand: true}));
+    const label = new St.Label({text, style_class: `aiu-note ${styleClass}`, x_expand: true});
+    // Wrap long messages, such as errors, instead of cutting them off.
+    label.clutter_text.line_wrap = true;
+    label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+    item.add_child(label);
     return item;
+}
+
+// A clickable menu row with an icon, for actions such as fixing an error.
+function actionItem(iconName, text, onActivate) {
+    const item = new PopupMenu.PopupMenuItem(text, {style_class: 'aiu-action-item'});
+    item.insert_child_at_index(new St.Icon({icon_name: iconName, icon_size: 14}), 1);
+    item.connect('activate', onActivate);
+    return item;
+}
+
+const hasProgram = name => GLib.find_program_in_path(name) !== null;
+
+// Runs a shell command in a new terminal window, keeping it open afterwards
+// so its result can be read. Resolves when the terminal process exits.
+async function runInTerminal(command) {
+    const script = `${command}; printf '\\nPress Enter to close this window.'; read _`;
+    const terminal = hasProgram('xdg-terminal-exec')
+        ? ['xdg-terminal-exec'] : hasProgram('ptyxis') ? ['ptyxis', '--'] : ['gnome-terminal', '--'];
+    const proc = Gio.Subprocess.new([...terminal, 'sh', '-c', script], Gio.SubprocessFlags.NONE);
+    await proc.wait_async(null);
 }
 
 function headerItem(dir, provider, state) {
@@ -309,12 +334,30 @@ class UsageIndicator extends PanelMenu.Button {
         }
     }
 
+    // Whether the provider's app runs, or undefined when that can't be told
+    // (no pattern, or pgrep missing).
+    async _appRunning(provider) {
+        if (!provider.appProcess)
+            return undefined;
+        try {
+            const proc = Gio.Subprocess.new(['pgrep', '-f', provider.appProcess],
+                Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE);
+            await proc.wait_async(this._cancellable);
+            const status = proc.get_exit_status();
+            return status === 0 ? true : status === 1 ? false : undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
     async _refreshProvider(provider) {
         if (this._inFlight.has(provider.id))
             return;
         this._inFlight.add(provider.id);
         try {
-            const data = await this._fetch(provider);
+            const [data, appRunning] = await Promise.all(
+                [this._fetch(provider), this._appRunning(provider)]);
+            data.appRunning = appRunning;
             this._states[provider.id] = {data, updatedAt: GLib.DateTime.new_now_local()};
         } catch (e) {
             // Keep showing the last good data, if it stays meaningful, and flag the error.
@@ -408,6 +451,31 @@ class UsageIndicator extends PanelMenu.Button {
         return item;
     }
 
+    // The full error, what it means and a fix when one is known, and a way to
+    // copy the error for a bug report.
+    _addErrorItems(provider, error) {
+        const fix = fixFor(provider.id, error, hasProgram);
+        if (fix)
+            this.menu.addMenuItem(noteItem(fix.hint, 'aiu-bad'));
+        this.menu.addMenuItem(noteItem(`Error: ${error}`, fix ? '' : 'aiu-bad'));
+        if (fix) {
+            this.menu.addMenuItem(actionItem('dialog-password-symbolic', fix.label, async () => {
+                try {
+                    await runInTerminal(fix.command);
+                } catch (e) {
+                    Main.notifyError(`AI Usage Meter: couldn't open a terminal`,
+                        `Run this yourself: ${fix.command}\n${e.message}`);
+                }
+                if (!this._cancellable.is_cancelled())
+                    this._refreshProvider(provider);
+            }));
+        }
+        this.menu.addMenuItem(actionItem('edit-copy-symbolic', 'Copy error', () => {
+            const text = fix ? `${error}\nFix: ${fix.command}` : error;
+            St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, text);
+        }));
+    }
+
     _addProviderSection(provider, spendOpts) {
         const state = this._states[provider.id];
         this.menu.addMenuItem(headerItem(this._ext.dir, provider, state));
@@ -416,10 +484,10 @@ class UsageIndicator extends PanelMenu.Button {
             this.menu.addMenuItem(noteItem('Loading…'));
             return;
         }
-        if (!state.data) {
-            this.menu.addMenuItem(noteItem(`Error: ${state.error}`, 'aiu-bad'));
+        if (state.error)
+            this._addErrorItems(provider, state.error);
+        if (!state.data)
             return;
-        }
 
         const windows = windowsOf(state.data);
         for (const window of windows) {
@@ -450,11 +518,38 @@ class UsageIndicator extends PanelMenu.Button {
 
 export default class AiUsageExtension extends Extension {
     enable() {
+        this._settings = this.getSettings();
         this._indicator = new UsageIndicator(this);
-        Main.panel.addToStatusArea(this.uuid, this._indicator);
+        Main.panel.addToStatusArea(this.uuid, this._indicator, 0, 'right');
+        this._placeIndicator();
+        this._settings.connectObject(
+            'changed::panel-position', () => this._placeIndicator(),
+            'changed::panel-index', () => this._placeIndicator(),
+            this);
+    }
+
+    // Moves the indicator to the top bar area and place the settings ask for,
+    // without recreating it (which would fetch all usage again).
+    _placeIndicator() {
+        const boxes = {left: Main.panel._leftBox, center: Main.panel._centerBox, right: Main.panel._rightBox};
+        const box = boxes[this._settings.get_string('panel-position')] ?? Main.panel._rightBox;
+        const container = this._indicator.container;
+        container.get_parent()?.remove_child(container);
+        box.insert_child_at_index(container, this._boxIndex(box, this._settings.get_int('panel-index')));
+    }
+
+    // The panel boxes hold hidden indicators too (screen recording, screen
+    // sharing, accessibility…), so a raw child index would land in the same
+    // visible spot for several values. Count only the visible items instead.
+    _boxIndex(box, wanted) {
+        const children = box.get_children();
+        const visible = children.filter(c => c.visible && (c.child?.visible ?? true));
+        return wanted < visible.length ? children.indexOf(visible[wanted]) : children.length;
     }
 
     disable() {
+        this._settings?.disconnectObject(this);
+        this._settings = null;
         this._indicator?.destroy();
         this._indicator = null;
     }

@@ -9,6 +9,9 @@ export const PROVIDERS = [
         name: 'Antigravity',
         color: '#4f8ef7',
         emptyHint: 'Open the Antigravity app to get usage',
+        // Matches the app's language server, which is what codexbar reads
+        // usage from: while it runs, even an untouched 0% window is real.
+        appProcess: 'language_server.*antigravity',
         // Usage is only readable while the app runs, so old figures mislead.
         dropStaleData: true,
     },
@@ -18,6 +21,9 @@ export const MUTED_COLOR = '#888888';
 const WARN = {percent: 70, color: '#e5a50a'};
 export const DANGER_COLOR = '#e01b24';
 const DANGER = {percent: 90, color: DANGER_COLOR};
+export const SPEND_COLOR = '#33d17a';
+// Windows up to a day long count as sessions, longer ones as weekly.
+const SHORT_WINDOW_MINUTES = 1440;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -29,6 +35,21 @@ export function parseReport(stdout) {
     if (report.error)
         throw new Error(report.error.message ?? 'codexbar failed');
     return report;
+}
+
+// A plain-words explanation of a known error and, when one exists, a command
+// that fixes it (run in a terminal), or null for errors without a known fix.
+// hasProgram(name) says whether a program is installed.
+export function fixFor(providerId, message, hasProgram) {
+    if (providerId === 'codex' && /auth\.json|codex login|reauthenticate/i.test(message)) {
+        const login = hasProgram('codex') ? 'codex login' : 'npx -y @openai/codex login';
+        return {
+            hint: 'Your Codex sign-in has expired. Sign in again in the browser window that opens.',
+            label: 'Sign in to Codex',
+            command: login,
+        };
+    }
+    return null;
 }
 
 function toWindow(key, label, raw) {
@@ -87,12 +108,15 @@ export function windowsOf(report) {
         extras.push(window);
     }
     const windows = [...core, ...extras];
-    // A real 0% window looks just like a placeholder, so judge the whole
-    // report: one window with real figures means the connection works and
+    // A real 0% window looks just like a placeholder, so otherwise judge the
+    // whole report: one window with real figures means the connection works and
     // every window, 0% ones included, is genuine. All placeholders means
     // nothing is connected, so no usage is known.
+    // When the extension knows whether the provider's app runs
+    // (report.appRunning), trust that instead of guessing.
     const updatedAt = Date.parse(usage.updatedAt);
-    if (windows.every(w => isPlaceholder(w, updatedAt)))
+    if (report.appRunning === false ||
+        (report.appRunning !== true && windows.every(w => isPlaceholder(w, updatedAt))))
         return [];
     // Stable, so windows of equal length keep codexbar's order.
     return windows.sort((a, b) =>
@@ -135,10 +159,6 @@ export function resetText(window, now = Date.now()) {
         return `${d}d ${h}h`;
     return h ? `${h}h ${m}m` : `${m}m`;
 }
-
-export const SPEND_COLOR = '#33d17a';
-// Windows up to a day long use the session threshold, longer ones the weekly one.
-const SHORT_WINDOW_MINUTES = 1440;
 
 // Usage still to spend in a window before it resets and the rest is lost, or
 // null when it isn't worth flagging: too much time left, too little usage

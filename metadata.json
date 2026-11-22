@@ -4,7 +4,8 @@
   "description": "Shows Claude, Codex and Antigravity usage limits in the top bar, using the codexbar CLI.",
   "settings-schema": "org.gnome.shell.extensions.ai-usage",
   "shell-version": [
-    "50"
+    "50",
+    "51"
   ],
   "url": "https://github.com/poriol/gnome-shell-extension-ai-usage-meter"
 }
