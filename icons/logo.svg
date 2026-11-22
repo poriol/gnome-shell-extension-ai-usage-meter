@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a2342"/>
+      <stop offset="1" stop-color="#12101c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.58" r="0.5">
+      <stop offset="0" stop-color="#8b7cf6" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#8b7cf6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#d9d2ff"/>
+      <stop offset="1" stop-color="#a99bff"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="0" y1="1" x2="0.4" y2="0">
+      <stop offset="0" stop-color="#cfc7ff"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background tile -->
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <rect width="256" height="256" rx="56" fill="url(#glow)"/>
+
+  <!-- Gauge track -->
+  <path d="M53.5 193 A86 86 0 1 1 202.5 193" fill="none" stroke="#ffffff" stroke-opacity="0.08"
+        stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Gauge segments in the three provider colours: Claude, Codex, Antigravity -->
+  <g fill="none" stroke-width="22" stroke-linecap="round">
+    <path d="M53.5 193 A86 86 0 0 1 62.1 94.7" stroke="#d97757"/>
+    <path d="M78.6 79.6 A86 86 0 0 1 177.4 79.6" stroke="#10a37f"/>
+    <path d="M193.9 94.7 A86 86 0 0 1 202.5 193" stroke="#4f8ef7"/>
+  </g>
+
+  <!-- Needle -->
+  <polygon points="151.9,84.2 137.4,153.4 118.6,146.6" fill="url(#needle)"/>
+
+  <!-- AI sparkle as the needle hub -->
+  <path d="M128 124 C130.5 142 136 147.5 154 150 C136 152.5 130.5 158 128 176 C125.5 158 120 152.5 102 150 C120 147.5 125.5 142 128 124 Z"
+        fill="url(#spark)" stroke="#12101c" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Small companion sparkles -->
+  <path d="M206 34 C207 41 209 43 216 44 C209 45 207 47 206 54 C205 47 203 45 196 44 C203 43 205 41 206 34 Z" fill="#d9d2ff"/>
+  <path d="M184 22 C184.5 25.5 185.5 26.5 189 27 C185.5 27.5 184.5 28.5 184 32 C183.5 28.5 182.5 27.5 179 27 C182.5 26.5 183.5 25.5 184 22 Z" fill="#d9d2ff" opacity="0.7"/>
+</svg>

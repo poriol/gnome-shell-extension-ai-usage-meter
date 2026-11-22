@@ -58,9 +58,8 @@ function aboutHeader(metadata, dir) {
         margin_bottom: 12,
     });
     box.append(new Gtk.Image({
-        gicon: Gio.FileIcon.new(dir.get_child('icons').get_child('spend-symbolic.svg')),
-        pixel_size: 64,
-        css_classes: ['accent'],
+        gicon: Gio.FileIcon.new(dir.get_child('icons').get_child('logo.svg')),
+        pixel_size: 96,
         margin_bottom: 6,
     }));
     box.append(new Gtk.Label({label: metadata.name, css_classes: ['title-1']}));

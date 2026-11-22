@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icons/logo.svg" alt="AI Usage Meter logo: a speedometer in Claude, Codex and Antigravity colours with an AI sparkle at its centre" width="128">
+</p>
+
 # AI Usage Meter — GNOME Shell Extension
 
 **Your Claude, Codex and Antigravity limits, always in sight in the GNOME top bar.**
