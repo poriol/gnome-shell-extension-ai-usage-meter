@@ -255,9 +255,24 @@ class PanelItem {
     }
 
     destroy() {
+        // Destroying this.actor would take its children with it; destroy them
+        // by name anyway so each object's cleanup is explicit.
+        this._spendLabel.destroy();
+        this._spendLabel = null;
+        this._spend.destroy();
+        this._spend = null;
+        this._icon.destroy();
+        this._icon = null;
+        this._locked.destroy();
+        this._locked = null;
+        this._unknown.destroy();
+        this._unknown = null;
+        this._label.destroy();
+        this._label = null;
+        this._bar.destroy();
+        this._bar = null;
         this.actor.destroy();
-        this.actor = this._bar = this._label = this._unknown = this._locked = null;
-        this._icon = this._spend = this._spendLabel = null;
+        this.actor = null;
     }
 }
 
