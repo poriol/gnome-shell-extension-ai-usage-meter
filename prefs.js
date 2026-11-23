@@ -11,35 +11,34 @@ const METRICS = [
     ['highest', 'Highest of all windows'],
 ];
 
-function metricRow(settings) {
-    const row = new Adw.ComboRow({
-        title: 'Top bar shows',
-        subtitle: 'Falls back to the highest window when a provider lacks this one',
-        model: Gtk.StringList.new(METRICS.map(([, label]) => label)),
-        selected: Math.max(0, METRICS.findIndex(([id]) => id === settings.get_string('panel-metric'))),
-    });
-    row.connect('notify::selected', () => settings.set_string('panel-metric', METRICS[row.selected][0]));
-    return row;
-}
-
 const POSITIONS = [
     ['left', 'Left'],
     ['center', 'Middle'],
     ['right', 'Right'],
 ];
 
-function positionRow(settings) {
+const REPO_URL = 'https://github.com/poriol/gnome-shell-extension-ai-usage-meter';
+
+function comboRow(settings, key, title, subtitle, options, signalIds) {
+    const indexOf = value => Math.max(0, options.findIndex(([id]) => id === value));
     const row = new Adw.ComboRow({
-        title: 'Area',
-        subtitle: 'Which part of the top bar it sits in',
-        model: Gtk.StringList.new(POSITIONS.map(([, label]) => label)),
-        selected: Math.max(0, POSITIONS.findIndex(([id]) => id === settings.get_string('panel-position'))),
+        title,
+        subtitle,
+        model: Gtk.StringList.new(options.map(([, label]) => label)),
+        selected: indexOf(settings.get_string(key)),
     });
-    row.connect('notify::selected', () => settings.set_string('panel-position', POSITIONS[row.selected][0]));
+    row.connect('notify::selected', () => {
+        const id = options[row.selected]?.[0];
+        if (id && settings.get_string(key) !== id)
+            settings.set_string(key, id);
+    });
+    signalIds.push(settings.connect(`changed::${key}`, () => {
+        const idx = indexOf(settings.get_string(key));
+        if (row.selected !== idx)
+            row.selected = idx;
+    }));
     return row;
 }
-
-const REPO_URL = 'https://github.com/poriol/gnome-shell-extension-ai-usage-meter';
 
 // A row that opens a web page in the browser.
 function linkRow(window, title, subtitle, url) {
@@ -94,6 +93,13 @@ export default class AiUsagePrefs extends ExtensionPreferences {
     // One page per tab; Adw shows a tab switcher once a window has several.
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        const signalIds = [];
+        window.connect('destroy', () => {
+            for (const id of signalIds)
+                settings.disconnect(id);
+            signalIds.length = 0;
+        });
+
         const addPage = (title, iconName) => {
             const page = new Adw.PreferencesPage({title, icon_name: iconName});
             window.add(page);
@@ -108,14 +114,16 @@ export default class AiUsagePrefs extends ExtensionPreferences {
         const displayPage = addPage('Display', 'video-display-symbolic');
         const display = new Adw.PreferencesGroup({title: 'Top bar'});
         displayPage.add(display);
-        display.add(metricRow(settings));
+        display.add(comboRow(settings, 'panel-metric', 'Top bar shows',
+            'Falls back to the highest window when a provider lacks this one', METRICS, signalIds));
         display.add(spinRow(settings, 'percent-min', 'Show percentage from (% used)',
             'Hide the top-bar number below this usage. 0 = always show', 0, 100));
         display.add(spinRow(settings, 'refresh-minutes', 'Refresh every (minutes)', '', 1, 60));
 
         const position = new Adw.PreferencesGroup({title: 'Position'});
         displayPage.add(position);
-        position.add(positionRow(settings));
+        position.add(comboRow(settings, 'panel-position', 'Area',
+            'Which part of the top bar it sits in', POSITIONS, signalIds));
         position.add(spinRow(settings, 'panel-index', 'Place in that area',
             '0 = leftmost; higher moves it further right', 0, 20));
 
@@ -137,6 +145,13 @@ export default class AiUsagePrefs extends ExtensionPreferences {
             'Start showing ⚡ this long before a session resets', 5, 300));
         when.add(spinRow(settings, 'spend-weekly-hours', 'Weekly: final hours',
             'Start showing ⚡ this long before a weekly window resets', 1, 168));
+
+        const syncSpendSensitive = () => {
+            when.sensitive = settings.get_boolean('spend-highlight') || settings.get_boolean('spend-notify');
+        };
+        syncSpendSensitive();
+        signalIds.push(settings.connect('changed::spend-highlight', syncSpendSensitive));
+        signalIds.push(settings.connect('changed::spend-notify', syncSpendSensitive));
 
         const providers = new Adw.PreferencesGroup({
             title: 'Providers',

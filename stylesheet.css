@@ -13,8 +13,9 @@
 .aiu-bar-panel { width: 28px; height: 8px; border-radius: 4px; }
 .aiu-bar-menu { min-width: 90px; }
 .aiu-bar-fill { border-radius: 3px; }
+.aiu-bar-panel .aiu-bar-fill { border-radius: 4px; }
 
-/* Unknown usage: a dim sleeping moon in place of .aiu-bar-panel */
+/* Locked weekly window and unknown usage icons in place of .aiu-bar-panel */
 .aiu-locked { icon-size: 13px; }
 .aiu-unknown {
     icon-size: 14px;

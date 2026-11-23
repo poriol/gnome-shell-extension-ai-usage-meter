@@ -1,5 +1,5 @@
 // Turns codexbar's JSON into what the UI shows. Plain JS with no Shell
-// imports, so prefs.js can share it.
+// imports, so prefs.js and tests can share it.
 
 export const PROVIDERS = [
     {id: 'claude', name: 'Claude', color: '#d97757'},
@@ -9,11 +9,10 @@ export const PROVIDERS = [
         name: 'Antigravity',
         color: '#4f8ef7',
         emptyHint: 'Update the Antigravity CLI (agy update) and sign in with agy to get usage',
-        // Without a working source, old figures mislead.
-        dropStaleData: true,
     },
 ];
 
+const CODEXBAR_URL = 'https://github.com/steipete/CodexBar';
 const ANTIGRAVITY_HELP_URL = 'https://antigravity.google/docs/install/';
 
 export const MUTED_COLOR = '#888888';
@@ -26,11 +25,29 @@ const SHORT_WINDOW_MINUTES = 1440;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+function firstUsefulError(stderr) {
+    return (stderr ?? '')
+        .split('\n')
+        .map(line => line.trim())
+        .find(line => line && !/no version information available/i.test(line));
+}
+
 // Returns the provider's report; codexbar reports failures as JSON too.
-export function parseReport(stdout) {
-    const report = JSON.parse(stdout || '[]')[0];
-    if (!report)
-        throw new Error('codexbar returned no data');
+export function parseReport(stdout, stderr = '') {
+    const raw = (stdout ?? '').trim();
+    if (!raw)
+        throw new Error(firstUsefulError(stderr) ?? 'codexbar returned no data');
+
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        throw new Error(firstUsefulError(stderr) ?? 'codexbar returned invalid JSON');
+    }
+
+    const report = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (!report || typeof report !== 'object')
+        throw new Error(firstUsefulError(stderr) ?? 'codexbar returned no data');
     if (report.error)
         throw new Error(report.error.message ?? 'codexbar failed');
     return report;
@@ -41,7 +58,26 @@ export function parseReport(stdout) {
 // errors without a known fix.
 // hasProgram(name) says whether a program is installed.
 export function fixFor(providerId, message, hasProgram) {
-    if (providerId === 'codex' && /auth\.json|codex login|reauthenticate/i.test(message)) {
+    if (/codexbar not found|no such file or directory.*codexbar/i.test(message)) {
+        return {
+            hint: 'codexbar is not installed. Install it so the extension can read your usage.',
+            label: 'Install codexbar',
+            command: hasProgram('brew') ? 'brew install steipete/tap/codexbar' : null,
+            url: CODEXBAR_URL,
+            urlLabel: 'How to install codexbar',
+        };
+    }
+    if (providerId === 'claude' &&
+        /oauth|credentials|sign in|login|unauthorized|401|expired|not authenticated|reauthenticate/i.test(message) &&
+        hasProgram('claude')) {
+        return {
+            hint: 'Your Claude sign-in has expired. Sign in again in the browser window that opens.',
+            label: 'Sign in to Claude',
+            command: 'claude auth login',
+        };
+    }
+    if (providerId === 'codex' &&
+        /auth\.json|codex login|reauthenticate|unauthorized|401|expired/i.test(message)) {
         const login = hasProgram('codex') ? 'codex login' : 'npx -y @openai/codex login';
         return {
             hint: 'Your Codex sign-in has expired. Sign in again in the browser window that opens.',
@@ -73,13 +109,25 @@ export function fixFor(providerId, message, hasProgram) {
     return null;
 }
 
-function toWindow(key, label, raw) {
+// Antigravity tracks independent quota pools (e.g. gemini vs 3p) whose ids
+// look like antigravity-quota-summary-<pool>-(5h|weekly). Shared windows
+// (Claude, Codex) have no pool (null).
+function quotaPool(id) {
+    const match = id?.match(/^antigravity-quota-summary-(.+)-(?:5h|weekly|daily|session|\d+[mhd])$/);
+    return match?.[1] ?? null;
+}
+
+function toWindow(key, label, raw, pool = null) {
+    const minutes = typeof raw.windowMinutes === 'number' && Number.isFinite(raw.windowMinutes)
+        ? raw.windowMinutes
+        : null;
     return {
         key,
         label,
+        pool,
         used: clamp(raw.usedPercent, 0, 100),
         resetsAt: Date.parse(raw.resetsAt),
-        minutes: raw.windowMinutes ?? Infinity,
+        minutes,
     };
 }
 
@@ -98,16 +146,31 @@ function extraTitle({id, title}) {
 // windows have a length. The report time may be a second off.
 function isPlaceholder(window, updatedAt) {
     const ms = window.resetsAt - updatedAt;
-    return window.minutes === Infinity && window.used === 0 && ms > 0 &&
+    return window.minutes === null && window.used === 0 && ms > 0 &&
         Math.abs(ms - Math.round(ms / 3600000) * 3600000) <= 2000;
 }
 
 const isSameQuota = (a, b) =>
-    a.minutes === b.minutes && a.resetsAt === b.resetsAt && a.used === b.used;
+    a.minutes === b.minutes && Object.is(a.resetsAt, b.resetsAt) && a.used === b.used;
+
+export function isWeekly(window) {
+    return window.minutes !== null
+        ? window.minutes > SHORT_WINDOW_MINUTES
+        : window.key === 'secondary';
+}
+
+export function isSession(window) {
+    return window.minutes !== null
+        ? window.minutes <= SHORT_WINDOW_MINUTES
+        : window.key === 'primary';
+}
+
+const highestUsed = windows =>
+    windows.reduce((a, b) => (!a || b.used > a.used ? b : a), null);
 
 // Lists the windows with known usage, shortest first. Antigravity repeats
 // primary/secondary in its extra windows: each pair becomes one row with the
-// extra's descriptive title and the core window's key.
+// extra's descriptive title and pool, and the core window's key.
 export function windowsOf(report) {
     const usage = report.usage ?? {};
     const labels = report.rateWindowLabels ?? {};
@@ -122,7 +185,7 @@ export function windowsOf(report) {
     for (const extra of usage.extraRateWindows ?? []) {
         if (extra.usageKnown === false || typeof extra.window?.usedPercent !== 'number')
             continue;
-        const window = toWindow(extra.id, extraTitle(extra), extra.window);
+        const window = toWindow(extra.id, extraTitle(extra), extra.window, quotaPool(extra.id));
         const twin = core.find(w => isSameQuota(w, window));
         if (twin) {
             core.splice(core.indexOf(twin), 1);
@@ -131,31 +194,44 @@ export function windowsOf(report) {
         extras.push(window);
     }
     const windows = [...core, ...extras];
+    if (windows.length === 0)
+        return [];
     // All placeholders means nothing is connected, so no usage is known.
     const updatedAt = Date.parse(usage.updatedAt);
     if (windows.every(w => isPlaceholder(w, updatedAt)))
         return [];
     // Stable, so windows of equal length keep codexbar's order.
-    return windows.sort((a, b) =>
-        a.minutes === b.minutes ? 0 : a.minutes - b.minutes);
+    return windows.sort((a, b) => {
+        const am = a.minutes ?? Infinity;
+        const bm = b.minutes ?? Infinity;
+        return am === bm ? 0 : am - bm;
+    });
 }
 
-// Picks the window the top bar shows. Windows are shortest first, so session
-// means the first one; a provider without a weekly window shows its highest.
-// Null when there are no windows.
+// Picks the window the top bar shows. Falls back to the highest-used window
+// when a provider has no window matching the requested metric. Null when empty.
 export function panelWindow(windows, metric) {
-    if (metric === 'session' && windows.length > 0)
-        return windows[0];
-    return windows.find(w => metric === 'weekly' && w.key === 'secondary') ??
-        windows.reduce((a, b) => (!a || b.used > a.used ? b : a), null);
+    if (metric === 'session')
+        return highestUsed(windows.filter(isSession)) ?? highestUsed(windows);
+    if (metric === 'weekly')
+        return highestUsed(windows.filter(isWeekly)) ?? highestUsed(windows);
+    return highestUsed(windows);
+}
+
+function isLaterReset(candidate, current) {
+    const cFinite = Number.isFinite(candidate.resetsAt);
+    const curFinite = Number.isFinite(current.resetsAt);
+    if (cFinite !== curFinite)
+        return cFinite;
+    return cFinite && candidate.resetsAt > current.resetsAt;
 }
 
 // The weekly (longer than a day) window that is used up, or null. With
 // several, the one resetting last: it is what keeps the provider blocked.
 export function exhaustedWindow(windows) {
     return windows
-        .filter(w => w.minutes > SHORT_WINDOW_MINUTES && w.used >= 100)
-        .reduce((a, b) => (!a || b.resetsAt > a.resetsAt ? b : a), null);
+        .filter(w => isWeekly(w) && w.used >= 100)
+        .reduce((a, b) => (!a || isLaterReset(b, a) ? b : a), null);
 }
 
 export function usageColor(used, baseColor) {
@@ -164,35 +240,53 @@ export function usageColor(used, baseColor) {
     return used >= WARN.percent ? WARN.color : baseColor;
 }
 
-// Short countdown to the window's reset, or '' if unknown.
-export function resetText(window, now = Date.now()) {
-    const mins = Math.floor((window.resetsAt - now) / 60000);
-    if (Number.isNaN(mins))
+// Human-readable duration for a positive millisecond span, or '' / 'now'.
+export function durationText(ms) {
+    if (!Number.isFinite(ms))
         return '';
-    if (mins <= 0)
+    if (ms <= 0)
         return 'now';
-    const d = Math.floor(mins / 1440), h = Math.floor(mins % 1440 / 60), m = mins % 60;
+    if (ms < 60000)
+        return '<1m';
+    const mins = Math.floor(ms / 60000);
+    const d = Math.floor(mins / 1440);
+    const h = Math.floor(mins % 1440 / 60);
+    const m = mins % 60;
     if (d)
         return `${d}d ${h}h`;
     return h ? `${h}h ${m}m` : `${m}m`;
 }
 
+// Short countdown to the window's reset, or '' if unknown.
+export function resetText(window, now = Date.now()) {
+    return durationText(window.resetsAt - now);
+}
+
+const samePool = (a, b) => !a.pool || !b.pool || a.pool === b.pool;
+
+function isLongerWindow(longer, shorter) {
+    if (longer.minutes !== null && shorter.minutes !== null)
+        return longer.minutes > shorter.minutes;
+    return isWeekly(longer) && isSession(shorter);
+}
+
 // Usage still to spend in a window before it resets and the rest is lost, or
 // null when it isn't worth flagging: too much time left, too little usage
 // left, or reset time unknown (a Claude session that hasn't started yet).
-// A longer window caps what a shorter one can still spend: 80% of a session
-// left is worth only 10% when the weekly window has 10% left.
+// A strictly longer window in the same quota pool caps what a shorter one can
+// still spend: 80% of a session left is worth only 10% when its weekly window
+// has 10% left.
 export function spendOf(window, windows, opts, now = Date.now()) {
     const msLeft = window.resetsAt - now;
-    if (Number.isNaN(msLeft) || msLeft <= 0)
+    if (!Number.isFinite(msLeft) || msLeft <= 0)
         return null;
-    const finalMinutes = window.minutes <= SHORT_WINDOW_MINUTES
-        ? opts.sessionMinutes : opts.weeklyHours * 60;
+    const finalMinutes = isWeekly(window) ? opts.weeklyHours * 60 : opts.sessionMinutes;
     if (msLeft > finalMinutes * 60000)
         return null;
-    const left = Math.min(...windows
-        .filter(w => w.minutes >= window.minutes)
-        .map(w => 100 - w.used), 100 - window.used);
+    const caps = windows
+        .filter(w => w !== window && samePool(w, window) && isLongerWindow(w, window))
+        .map(w => 100 - w.used);
+    const left = Math.min(...caps, 100 - window.used);
     return left >= opts.minLeft ? {left, msLeft} : null;
 }
 

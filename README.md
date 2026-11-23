@@ -47,7 +47,7 @@ curl -fsSL https://raw.githubusercontent.com/poriol/gnome-shell-extension-ai-usa
 
 That's it. Run the same command again any time to update to the latest version.
 
-Requires **GNOME Shell 50**.
+Requires **GNOME Shell 50 or 51**.
 
 <details>
 <summary>Install by hand instead</summary>
