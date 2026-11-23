@@ -1,7 +1,7 @@
 {
   "uuid": "ai-usage-meter@poriol.github.io",
   "name": "AI Usage Meter",
-  "description": "Shows Claude, Codex and Antigravity usage limits in the top bar, using the codexbar CLI.",
+  "description": "Shows Claude, Codex and Antigravity usage limits in the top bar, using the codexbar CLI.\n\nClipboard: the \"Copy error\" menu item writes the error message to the clipboard when you click it. The extension never reads the clipboard.",
   "settings-schema": "org.gnome.shell.extensions.ai-usage",
   "shell-version": [
     "50",
