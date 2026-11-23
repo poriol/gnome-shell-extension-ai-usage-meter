@@ -305,8 +305,11 @@ class UsageIndicator extends PanelMenu.Button {
             this._render();
         }, this);
         this.menu.connectObject('open-state-changed', (_menu, open) => {
-            const age = GLib.get_monotonic_time() - this._lastRefresh;
-            if (open && age > MENU_OPEN_REFRESH_S * GLib.USEC_PER_SEC)
+            if (!open)
+                return;
+            this._render();
+            const ageMs = Date.now() - this._lastRefresh;
+            if (ageMs < 0 || ageMs > MENU_OPEN_REFRESH_S * 1000)
                 this._refresh();
         }, this);
 
@@ -368,7 +371,7 @@ class UsageIndicator extends PanelMenu.Button {
     }
 
     _refresh() {
-        this._lastRefresh = GLib.get_monotonic_time();
+        this._lastRefresh = Date.now();
         this._enabledProviders().forEach(p => this._refreshProvider(p));
     }
 
