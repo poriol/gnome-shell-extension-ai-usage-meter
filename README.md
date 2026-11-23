@@ -24,7 +24,7 @@ I looked for a GNOME extension that showed all of this at a glance and couldn't 
 - **A menu with every rate window** (session, weekly, per model) and the countdown to its reset.
 - **Use it before it resets:** a green ⚡ with the percentage still left appears when a window is about to reset with usage left over, with an optional notification. No more wasted quota.
 - **Locked:** a red lock and the time to reset replace the bar when a weekly window is used up.
-- **Honest when it doesn't know:** a sleeping moon instead of a misleading empty bar when a provider can't be read (for example when the Antigravity app is closed).
+- **Honest when it doesn't know:** a sleeping moon instead of a misleading empty bar when a provider can't be read (for example when Antigravity isn't signed in).
 - **Configurable:** pick the providers, which window the bar follows, the refresh interval and the ⚡ thresholds.
 
 The extension never reads or stores your API keys or logins: it only runs [`codexbar`](https://github.com/steipete/CodexBar), which uses the sign-ins of the apps themselves.

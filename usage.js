@@ -8,14 +8,13 @@ export const PROVIDERS = [
         id: 'antigravity',
         name: 'Antigravity',
         color: '#4f8ef7',
-        emptyHint: 'Open the Antigravity app to get usage',
-        // Matches the app's language server, which is what codexbar reads
-        // usage from: while it runs, even an untouched 0% window is real.
-        appProcess: 'language_server.*antigravity',
-        // Usage is only readable while the app runs, so old figures mislead.
+        emptyHint: 'Update the Antigravity CLI (agy update) and sign in with agy to get usage',
+        // Without a working source, old figures mislead.
         dropStaleData: true,
     },
 ];
+
+const ANTIGRAVITY_HELP_URL = 'https://antigravity.google/docs/install/';
 
 export const MUTED_COLOR = '#888888';
 const WARN = {percent: 70, color: '#e5a50a'};
@@ -37,8 +36,9 @@ export function parseReport(stdout) {
     return report;
 }
 
-// A plain-words explanation of a known error and, when one exists, a command
-// that fixes it (run in a terminal), or null for errors without a known fix.
+// A plain-words explanation of a known error with a command that fixes it (run
+// in a terminal), a web page that helps (url, urlLabel), or both. Null for
+// errors without a known fix.
 // hasProgram(name) says whether a program is installed.
 export function fixFor(providerId, message, hasProgram) {
     if (providerId === 'codex' && /auth\.json|codex login|reauthenticate/i.test(message)) {
@@ -48,6 +48,27 @@ export function fixFor(providerId, message, hasProgram) {
             label: 'Sign in to Codex',
             command: login,
         };
+    }
+    if (providerId === 'antigravity') {
+        // codexbar's message when it finds neither the CLI nor the app.
+        if (/not detected/i.test(message)) {
+            return {
+                hint: 'Antigravity usage is read with its CLI (agy). Install it, then run agy once to sign in.',
+                url: ANTIGRAVITY_HELP_URL,
+                urlLabel: 'How to install agy',
+            };
+        }
+        // agy makes a one-time sign-in link itself and opens it in the browser.
+        if (/signed out|sign in|not signed|session expired|auth not found/i.test(message)) {
+            return {
+                hint: 'Your Antigravity sign-in has expired. Choose Google OAuth in the terminal, sign in in the browser, then type /quit.',
+                label: 'Sign in to Antigravity',
+                // The installer's directory may be missing from the session's PATH.
+                command: 'PATH="$PATH:$HOME/.local/bin" agy',
+                url: ANTIGRAVITY_HELP_URL,
+                urlLabel: 'Sign-in help',
+            };
+        }
     }
     return null;
 }
@@ -71,12 +92,14 @@ function extraTitle({id, title}) {
     return title.replace('Gemini', `Gemini ${model[0].toUpperCase()}${model.slice(1)}`);
 }
 
-// With its app closed, Antigravity reports an untouched window that "resets"
-// a whole number of hours after the report was made, to the second: a
-// placeholder recomputed on every call, not real usage.
+// When codexbar can't read Antigravity's quotas it reports an untouched window
+// without a length that "resets" a whole number of hours after the report was
+// made: a placeholder recomputed on every call, not real usage. Real untouched
+// windows have a length. The report time may be a second off.
 function isPlaceholder(window, updatedAt) {
     const ms = window.resetsAt - updatedAt;
-    return window.used === 0 && ms > 0 && ms % 3600000 === 0;
+    return window.minutes === Infinity && window.used === 0 && ms > 0 &&
+        Math.abs(ms - Math.round(ms / 3600000) * 3600000) <= 2000;
 }
 
 const isSameQuota = (a, b) =>
@@ -108,15 +131,9 @@ export function windowsOf(report) {
         extras.push(window);
     }
     const windows = [...core, ...extras];
-    // A real 0% window looks just like a placeholder, so otherwise judge the
-    // whole report: one window with real figures means the connection works and
-    // every window, 0% ones included, is genuine. All placeholders means
-    // nothing is connected, so no usage is known.
-    // When the extension knows whether the provider's app runs
-    // (report.appRunning), trust that instead of guessing.
+    // All placeholders means nothing is connected, so no usage is known.
     const updatedAt = Date.parse(usage.updatedAt);
-    if (report.appRunning === false ||
-        (report.appRunning !== true && windows.every(w => isPlaceholder(w, updatedAt))))
+    if (windows.every(w => isPlaceholder(w, updatedAt)))
         return [];
     // Stable, so windows of equal length keep codexbar's order.
     return windows.sort((a, b) =>

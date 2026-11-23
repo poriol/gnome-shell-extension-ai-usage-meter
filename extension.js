@@ -18,7 +18,8 @@ import {
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 Gio._promisify(Gio.Subprocess.prototype, 'wait_async');
 
-const FETCH_TIMEOUT_S = 60;
+// Signed out, codexbar waits a minute for agy before it says so; it allows 90 s.
+const FETCH_TIMEOUT_S = 100;
 const MENU_OPEN_REFRESH_S = 60;
 const FALLBACK_CODEXBAR = '/home/linuxbrew/.linuxbrew/bin/codexbar';
 const UNKNOWN_ICON_OPACITY = 130;
@@ -186,7 +187,7 @@ class PanelItem {
             y_align: Clutter.ActorAlign.CENTER,
         });
         // Stands in for the bar when usage is unknown: an empty bar would read as 0% used.
-        // A sleeping moon: the app is closed, so its usage can't be read.
+        // A sleeping moon: no source could report usage.
         this._unknown = new St.Icon({
             gicon: Gio.FileIcon.new(dir.get_child('icons').get_child('closed-symbolic.svg')),
             style_class: 'aiu-unknown',
@@ -349,30 +350,12 @@ class UsageIndicator extends PanelMenu.Button {
         }
     }
 
-    // Whether the provider's app runs, or undefined when that can't be told
-    // (no pattern, or pgrep missing).
-    async _appRunning(provider) {
-        if (!provider.appProcess)
-            return undefined;
-        try {
-            const proc = Gio.Subprocess.new(['pgrep', '-f', provider.appProcess],
-                Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE);
-            await proc.wait_async(this._cancellable);
-            const status = proc.get_exit_status();
-            return status === 0 ? true : status === 1 ? false : undefined;
-        } catch {
-            return undefined;
-        }
-    }
-
     async _refreshProvider(provider) {
         if (this._inFlight.has(provider.id))
             return;
         this._inFlight.add(provider.id);
         try {
-            const [data, appRunning] = await Promise.all(
-                [this._fetch(provider), this._appRunning(provider)]);
-            data.appRunning = appRunning;
+            const data = await this._fetch(provider);
             this._states[provider.id] = {data, updatedAt: GLib.DateTime.new_now_local()};
         } catch (e) {
             // Keep showing the last good data, if it stays meaningful, and flag the error.
@@ -473,7 +456,7 @@ class UsageIndicator extends PanelMenu.Button {
         if (fix)
             this.menu.addMenuItem(noteItem(fix.hint, 'aiu-bad'));
         this.menu.addMenuItem(noteItem(`Error: ${error}`, fix ? '' : 'aiu-bad'));
-        if (fix) {
+        if (fix?.command) {
             this.menu.addMenuItem(actionItem('dialog-password-symbolic', fix.label, async () => {
                 try {
                     await runInTerminal(fix.command);
@@ -485,8 +468,18 @@ class UsageIndicator extends PanelMenu.Button {
                     this._refreshProvider(provider);
             }));
         }
+        if (fix?.url) {
+            this.menu.addMenuItem(actionItem('web-browser-symbolic', fix.urlLabel, () => {
+                try {
+                    Gio.AppInfo.launch_default_for_uri(fix.url, null);
+                } catch (e) {
+                    Main.notifyError(`AI Usage Meter: couldn't open the browser`,
+                        `${fix.url}\n${e.message}`);
+                }
+            }));
+        }
         this.menu.addMenuItem(actionItem('edit-copy-symbolic', 'Copy error', () => {
-            const text = fix ? `${error}\nFix: ${fix.command}` : error;
+            const text = fix ? `${error}\nFix: ${fix.command ?? fix.url}` : error;
             St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, text);
         }));
     }
